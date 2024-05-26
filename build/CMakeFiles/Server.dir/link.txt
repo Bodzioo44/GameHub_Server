@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/Server.dir/src/Server.cpp.o CMakeFiles/Server.dir/src/Lobby.cpp.o CMakeFiles/Server.dir/src/Player.cpp.o -o Server 

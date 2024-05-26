@@ -1,0 +1,27 @@
+-------------SERVER------------------
+
+
+Increase Buffer? Send packets in smaller portions?
+Find the best way to send enums over sockets.
+static_cast ints?
+
+
+Fix the whole disconnect/reconnect thingy (inside lobby too)
+
+
+
+
+
+----------------LOBBY---------------------
+
+Add gamehistory array for reconnects.
+Add somekind of board state hash to confirm that boards are synchronized?
+
+
+
+
+
+
+-------------ENUMS-----------------------
+
+Get rid of the values from enums, and just static cast all enums.
