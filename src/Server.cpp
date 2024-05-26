@@ -53,7 +53,7 @@ void Server::HandleMessage(int clientSocket)
             else if (current_api == API::CREATE_LOBBY)
             {
                 //SAFETY TODO: Add check if player is already in a lobby.
-                Lobby* new_lobby = new Lobby(Generate_Lobby_ID(), Get_GameType(it.value()), player_map[clientSocket]);
+                Lobby* new_lobby = new Lobby(Generate_Lobby_ID(), static_cast<GameType>(it.value()), player_map[clientSocket]);
                 lobby_map[new_lobby->Get_Lobby_ID()] = new_lobby;
                 json response;
                 response[API::MESSAGE].push_back("Lobby created with id: " + std::to_string(new_lobby->Get_Lobby_ID()));
@@ -198,7 +198,7 @@ void Server::Listening()
                 {
                     running = false;
                 }
-                cout << input << endl;
+                //cout << input << endl;
             }
             else
             {
@@ -267,21 +267,6 @@ int Server::Generate_Lobby_ID()
 {
     //TODO: Reuse lobby ids.
     return lobby_id++;
-}
-
-GameType Server::Get_GameType(int type)
-{
-    switch (type)
-    {
-        case 0:
-            return GameType::CHECKERS_2;
-        case 1:
-            return GameType::CHESS_2;
-        case 2:
-            return GameType::CHESS_4;
-        default:
-            return GameType::CHESS_2;
-    }
 }
 
 

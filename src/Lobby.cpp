@@ -30,7 +30,7 @@ Lobby::Lobby(int lobby_id, GameType type, Player* p): lobby_id(lobby_id), type(t
     cout << "Creating lobby with id: " << lobby_id << endl;
 }
 
-//each lobby method should return Player name alongside with hey/value pair (api_call, data).
+//each lobby method should return Player name alongside with key/value pair (api_call, data).
 // {
 //     "PlayerName": 
 //     {
@@ -86,7 +86,6 @@ json Lobby::Add_Player(Player* p)
 json Lobby::Remove_Player(Player* p)
 {
     json response;
-    cout << "we rae inside" << endl;
     if (!Live && player_count > 1)
     {
         player_count--;
