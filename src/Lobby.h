@@ -37,10 +37,13 @@ public:
 
     int Get_Player_Count() const;
 
+
+
     json Add_Player(Player* p);
     json Remove_Player(Player* p);
     json Start_Lobby(Player* p);
     json Game_Update(Player* p, json data);
+    json Send_Lobby_Message(string message);
 
 private:
 

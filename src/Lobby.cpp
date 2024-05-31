@@ -14,7 +14,6 @@ map<GameType, string> GameType_str =
     {GameType::CHESS_4, "Chess 4"}
 };
 
-map<Color, string> Coloruu = Color_str;
 
 
 Lobby::Lobby(int lobby_id, GameType type, Player* p): lobby_id(lobby_id), type(type)
@@ -24,8 +23,8 @@ Lobby::Lobby(int lobby_id, GameType type, Player* p): lobby_id(lobby_id), type(t
     player_count = 1;
     players.push_back(p);
     host = p;
-    p->Join_Lobby(this);
-    p->Set_Color(Assign_Color());
+    p->lobby_ptr = this;
+    p->color = Assign_Color();
 
     cout << "Creating lobby with id: " << lobby_id << endl;
 }
@@ -38,6 +37,9 @@ Lobby::Lobby(int lobby_id, GameType type, Player* p): lobby_id(lobby_id), type(t
 //         "Game_Update": "data",
 //         ...
 //     }
+//     "Remove_Lobby" : true,
+//     "Disconnect_Player": true
+
 // }
 
 json Lobby::Add_Player(Player* p)
@@ -46,38 +48,35 @@ json Lobby::Add_Player(Player* p)
 
     if (player_count < max_player_count && !Live)
     {   
-        if (p->In_Lobby())
+        if (p->lobby_ptr)
         {
-            Return_JSON[p->Get_str_FD()][API::MESSAGE].push_back("You are already in a lobby.");
+            Return_JSON[to_string(p->socket_fd)][API::MESSAGE].push_back("You are already in a lobby.");
             return Return_JSON;
         }
         for (Player* pp: players)
         {
-            Return_JSON[pp->Get_str_FD()][API::MESSAGE] = json::array();
-            Return_JSON[pp->Get_str_FD()][API::MESSAGE].push_back(p->Get_Name() + " has joined the lobby.");
+            Return_JSON[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has joined the lobby.");
         }
 
         player_count++;
         players.push_back(p);
-        p->Join_Lobby(this);
-        p->Set_Color(Assign_Color());
+        p->lobby_ptr = this;
+        p->color = Assign_Color();
 
         for (Player* pp: players)
         {
-            Return_JSON[pp->Get_str_FD()][API::UPDATE_LOBBY] = Get_Lobby_Info();
+            Return_JSON[to_string(pp->socket_fd)][API::UPDATE_LOBBY] = Get_Lobby_Info();
         }
-
-        Return_JSON[p->Get_str_FD()][API::MESSAGE] = json::array();
-        Return_JSON[p->Get_str_FD()][API::MESSAGE].push_back("You have joined the lobby.");
-        Return_JSON[p->Get_str_FD()][API::JOIN_LOBBY] = Get_Lobby_Info();
+        Return_JSON[to_string(p->socket_fd)][API::MESSAGE].push_back("You have joined the lobby.");
+        Return_JSON[to_string(p->socket_fd)][API::JOIN_LOBBY] = Get_Lobby_Info();
     }
     else if (!Live)
     {
-        Return_JSON[p->Get_str_FD()][API::MESSAGE].push_back("Lobby is full.");
+        Return_JSON[to_string(p->socket_fd)][API::MESSAGE].push_back("Lobby is full.");
     }
     else
     {
-        Return_JSON[p->Get_str_FD()][API::MESSAGE].push_back("Game has already started.");
+        Return_JSON[to_string(p->socket_fd)][API::MESSAGE].push_back("Game has already started.");
     }
     return Return_JSON;
 }
@@ -86,11 +85,13 @@ json Lobby::Add_Player(Player* p)
 json Lobby::Remove_Player(Player* p)
 {
     json response;
+    response["Remove_Lobby"] = false;
+
     if (!Live && player_count > 1)
     {
         player_count--;
         players.erase(std::remove(players.begin(), players.end(), p), players.end());
-        p->Leave_Lobby();
+        p->lobby_ptr = nullptr;
 
         if (p == host)
         {
@@ -99,23 +100,24 @@ json Lobby::Remove_Player(Player* p)
 
         for (Player* pp: players)
         {
-            response[pp->Get_str_FD()][API::MESSAGE].push_back(p->Get_Name() + " has left the lobby.");
-            response[pp->Get_str_FD()][API::UPDATE_LOBBY] = Get_Lobby_Info();
+            response[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has left the lobby.");
+            response[to_string(pp->socket_fd)][API::UPDATE_LOBBY] = Get_Lobby_Info();
         }
-        response[p->Get_str_FD()][API::MESSAGE].push_back("You have left the lobby.");
-        response[p->Get_str_FD()][API::LEAVE_LOBBY] = "0";
+        response[to_string(p->socket_fd)][API::MESSAGE].push_back("You have left the lobby.");
+        response[to_string(p->socket_fd)][API::LEAVE_LOBBY] = "0";
+    }
+    else if (!Live && player_count == 1)
+    {
+        response[to_string(p->socket_fd)][API::MESSAGE].push_back("You have left the lobby.");
+        response[to_string(p->socket_fd)][API::LEAVE_LOBBY] = "0";
+        player_count--;
+        players.erase(std::remove(players.begin(), players.end(), p), players.end());
+        p->lobby_ptr = nullptr;
+        response["Remove_Lobby"] = true;
     }
     else if (Live)
     {
-        response[p->Get_str_FD()][API::MESSAGE].push_back("Cant leave live game.");
-    }
-    else
-    {
-        response[p->Get_str_FD()][API::MESSAGE].push_back("You have left the lobby.");
-        response[p->Get_str_FD()][API::LEAVE_LOBBY] = "0";
-        player_count--;
-        players.erase(std::remove(players.begin(), players.end(), p), players.end());
-        p->Leave_Lobby();
+        response[to_string(p->socket_fd)][API::MESSAGE].push_back("Cant leave live game.");
     }
     return response;
 }
@@ -128,17 +130,17 @@ json Lobby::Start_Lobby(Player* p)
         Live = true;
         for (Player* pp: players)
         {
-            response[pp->Get_str_FD()][API::MESSAGE].push_back("Game has started.");
-            response[pp->Get_str_FD()][API::START_LOBBY] = pp->Get_Color();
+            response[to_string(pp->socket_fd)][API::MESSAGE].push_back("Game has started.");
+            response[to_string(pp->socket_fd)][API::START_LOBBY] = pp->color;
         }
     }
     else if (p != host)
     {
-        response[p->Get_str_FD()][API::MESSAGE].push_back("Only the host can start the game.");
+        response[to_string(p->socket_fd)][API::MESSAGE].push_back("Only the host can start the game.");
     }
     else
     {
-        response[p->Get_str_FD()][API::MESSAGE].push_back("Not enough players.");
+        response[to_string(p->socket_fd)][API::MESSAGE].push_back("Not enough players.");
     }
     return response;
 }
@@ -151,8 +153,18 @@ json Lobby::Game_Update(Player* p, json data)
     {
         if (pp != p)
         {
-            response[pp->Get_str_FD()][API::GAME_UPDATE] = data;
+            response[to_string(pp->socket_fd)][API::GAME_UPDATE] = data;
         }
+    }
+    return response;
+}
+
+json Lobby::Send_Lobby_Message(string message)
+{
+    json response;
+    for (Player* p: players)
+    {
+        response[to_string(p->socket_fd)][API::LOBBY_MESSAGE] = message;
     }
     return response;
 }
@@ -171,9 +183,8 @@ json Lobby::Get_Lobby_Info() const
 
     for (Player* p: players)
     {
-        //TODO: replace with p->Get_Info()?
-        response["Players"][p->Get_Name()].push_back(p->Get_Name());
-        response["Players"][p->Get_Name()].push_back(Coloruu[p->Get_Color()]);
+        //TODO: replace with p->Get_Info()? send fd instead of name?
+        response["Players"][p->Get_name()] = p->Get_player_info();
     }
     return response;
 }
@@ -203,11 +214,11 @@ void Lobby::print_Lobby_Info() const
     cout << "Lobby ID: " << lobby_id << endl;
     cout << "Game Type: " << GameType_str[type] << endl;
     cout << "Player Count: " << player_count << endl;
-    cout << "Host: " << host->Get_Name() << endl;
+    cout << "Host: " << host->Get_name() << endl;
     cout << "Players: " << endl;
     for (Player* p: players)
     {
-        cout << p->Get_Name() << endl;
+        cout << p->Get_name() << endl;
     }
 }
 

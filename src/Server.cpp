@@ -15,23 +15,20 @@ Server::Server()
 void Server::HandleMessage(int clientSocket)
 {
     char buffer[1024] = { 0 };
-    //TODO: Increase buffer? 
-    //multiple lobbies and game history can be quite long.
     ssize_t numbytes = recv(clientSocket, buffer, sizeof(buffer), 0);
     if (numbytes == 0) {DisconnectClient(clientSocket);}
+
     else 
     {
         json message = json::parse(buffer);
         cout << message.dump(4) << endl;
         for (json::iterator it = message.begin(); it != message.end(); ++it)
         {
-            //TODO Create string/funcion map?
             cout << "currently processing API: " << it.key() << endl;
             string current_api = it.key();
 
             if (current_api == API::ASSIGN_NAME)
             {
-                cout << "Assigning name" << endl;
                 if (Check_Name_Availablity(it.value()))
                 {
                     Player* p = new Player(it.value(), clientSocket);
@@ -39,6 +36,7 @@ void Server::HandleMessage(int clientSocket)
                     json response;
                     response[API::MESSAGE].push_back("You have joined the server as " + (std::string)it.value());
                     Send(clientSocket, response);
+                    cout << "Player with name: " << p->Get_name() << " has joined the server with fd: " << clientSocket << endl;
                 }
                 else
                 {
@@ -52,20 +50,28 @@ void Server::HandleMessage(int clientSocket)
             //TODO: Send every player without a lobby updated list.
             else if (current_api == API::CREATE_LOBBY)
             {
-                //SAFETY TODO: Add check if player is already in a lobby.
-                Lobby* new_lobby = new Lobby(Generate_Lobby_ID(), static_cast<GameType>(it.value()), player_map[clientSocket]);
-                lobby_map[new_lobby->Get_Lobby_ID()] = new_lobby;
-                json response;
-                response[API::MESSAGE].push_back("Lobby created with id: " + std::to_string(new_lobby->Get_Lobby_ID()));
-                response[API::CREATE_LOBBY] = new_lobby->Get_Lobby_Info();
-                Send(clientSocket, response);
+                if (!player_map[clientSocket]->lobby_ptr) //Check if player is already in a lobby.
+                {
+                    Lobby* new_lobby = new Lobby(Generate_Lobby_ID(), static_cast<GameType>(it.value()), player_map[clientSocket]);
+                    lobby_map[new_lobby->Get_Lobby_ID()] = new_lobby;
+                    json response;
+                    response[API::MESSAGE].push_back("Lobby created with id: " + std::to_string(new_lobby->Get_Lobby_ID()));
+                    response[API::CREATE_LOBBY] = new_lobby->Get_Lobby_Info();
+                    Send(clientSocket, response);
+                    cout << "Lobby created with id: " << new_lobby->Get_Lobby_ID() << "by player: " << player_map[clientSocket]->Get_name() << endl;
+                }
+                else
+                {
+                    json response;
+                    response[API::MESSAGE].push_back("You are already in a lobby.");
+                    Send(clientSocket, response);
+                }
             }
 
-            //Check if Lobby exists.
             else if (current_api == API::JOIN_LOBBY)
             {
                 int lobby_id = it.value();
-                if (lobby_map.find(lobby_id) != lobby_map.end())
+                if (lobby_map.find(lobby_id) != lobby_map.end()) //Check if lobby id is correct.
                 {
                     json response = lobby_map[lobby_id]->Add_Player(player_map[clientSocket]);
                     for (json::iterator it = response.begin(); it != response.end(); ++it)
@@ -82,17 +88,20 @@ void Server::HandleMessage(int clientSocket)
             }
             else if (current_api == API::LEAVE_LOBBY)
             {
-                Lobby* l = player_map[clientSocket]->Get_Lobby_ptr();
-                //Add check if correct lobby is requested.
-                //or dont send data at all, and just get the lobby id from the player. (YAP)
-                Player* ppp = player_map[clientSocket];
-                json response = l->Remove_Player(ppp);
+                Player* current_player = player_map[clientSocket];
+                Lobby* current_lobby = current_player->lobby_ptr;
 
-                if (l->Get_Player_Count() < 1)
+
+                json response = current_lobby->Remove_Player(current_player);
+
+                if (response["Remove_Lobby"])
                 {
-                    lobby_map.erase(l->Get_Lobby_ID());
-                    delete l;
-                }   
+                    lobby_map.erase(current_lobby->Get_Lobby_ID());
+                    //TODO: before deleting the lobby remove all disconnected players.
+                    delete current_lobby;
+                }
+                response.erase("Remove_Lobby");
+                
                 for (json::iterator it = response.begin(); it != response.end(); ++ it)
                 {
                     Send(stoi(it.key()), it.value());
@@ -100,7 +109,7 @@ void Server::HandleMessage(int clientSocket)
             }
             else if (current_api == API::START_LOBBY)
             {
-                Lobby* l = player_map[clientSocket]->Get_Lobby_ptr();
+                Lobby* l = player_map[clientSocket]->lobby_ptr;
                 json response = l->Start_Lobby(player_map[clientSocket]);
                 for (json::iterator it = response.begin(); it != response.end(); ++it)
                 {
@@ -113,10 +122,12 @@ void Server::HandleMessage(int clientSocket)
             //Add check if any lobby exists. to avoid sending null.
             {
                 json response;
+                response[API::UPDATE_LOBBY_LIST] = {};
                 for (auto const& pair : lobby_map)
                 {
                     response[API::UPDATE_LOBBY_LIST][std::to_string(pair.first)] = pair.second->Get_Lobby_Info();
                 }
+
                 Send(clientSocket, response);
             }
             else if (current_api == API::UPDATE_LOBBY_LIST)
@@ -130,15 +141,45 @@ void Server::HandleMessage(int clientSocket)
                 // {
                 //     cout << it.key() << " : " << it.value() << endl;
                 // }
-                Lobby* l = player_map[clientSocket]->Get_Lobby_ptr();
+                Lobby* l = player_map[clientSocket]->lobby_ptr;
                 json response = l->Game_Update(player_map[clientSocket], it.value());
                 for (json::iterator it = response.begin(); it != response.end(); ++it)
                 {
                     Send(stoi(it.key()), it.value());
                 }
-
-
             }
+            else if (current_api == API::GLOBAL_MESSAGE)
+            {
+                json response;
+                response[API::GLOBAL_MESSAGE] = it.value();
+                for (auto const& pair : player_map)
+                {
+                    Send(pair.first, response);
+                }
+            }
+            else if (current_api == API::LOBBY_MESSAGE)
+            {
+                Player* current_player = player_map[clientSocket];
+                Lobby* current_lobby = current_player->lobby_ptr;
+
+                json response;
+                if (current_lobby)
+                {
+                    response = current_lobby->Send_Lobby_Message(it.value());
+                    for (json::iterator it = response.begin(); it != response.end(); ++it)
+                    {
+                        Send(stoi(it.key()), it.value());
+                    }
+                }
+                else
+                {
+                    response[API::MESSAGE].push_back("You are not in a lobby.");
+                    Send(clientSocket, response);
+                }
+            }
+
+
+            
             else
             {
                 cout << "Unknown API" << endl;
@@ -194,7 +235,7 @@ void Server::Listening()
             {
                 string input;
                 getline(cin, input);
-                if (input == "exit")
+                if (input == "stop")
                 {
                     running = false;
                 }
@@ -231,7 +272,7 @@ void Server::AssignClient()
     // sockaddr_in clientAddress;
     // socklen_t clientSize = sizeof(clientAddress);
     int clientSocket = accept(serverSocket, nullptr, nullptr);
-    cout << "Client connected with fd: " << clientSocket << endl;
+    cout << "New connection with fd: " << clientSocket << endl;
     clients.push_back(clientSocket);
 }
 
@@ -255,7 +296,7 @@ bool Server::Check_Name_Availablity(string name)
 {
     for (auto const& pair : player_map)
     {
-        if (pair.second->Get_Name() == name)
+        if (pair.second->Get_name() == name)
         {
             return false;
         }

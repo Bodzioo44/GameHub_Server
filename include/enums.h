@@ -31,14 +31,6 @@ namespace Enums
         TAKEN_BY_FRIENDLY
     };
 
-    const map<Enums::Color, string> Color_str = 
-    {
-        {Enums::Color::WHITE, "White"},
-        {Enums::Color::BLACK, "Black"},
-        {Enums::Color::ORANGE, "Orange"},
-        {Enums::Color::BLUE, "Blue"}
-    };
-
 }
 
 //Assigning constants inside a header file is ok?
@@ -55,6 +47,8 @@ namespace API
     const string DISCONNECT = "Disconnect";
     const string UPDATE_LOBBY = "Update_Lobby";
     const string START_LOBBY = "Start_Lobby";
+    const string GLOBAL_MESSAGE = "Global_Message";
+    const string LOBBY_MESSAGE = "Lobby_Message";
 }
 
 
