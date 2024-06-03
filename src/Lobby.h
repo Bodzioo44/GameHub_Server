@@ -37,8 +37,6 @@ public:
 
     int Get_Player_Count() const;
 
-
-
     json Add_Player(Player* p);
     json Remove_Player(Player* p);
     json Start_Lobby(Player* p);

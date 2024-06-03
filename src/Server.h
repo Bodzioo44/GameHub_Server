@@ -52,12 +52,13 @@ private:
     bool running;
     sockaddr_in serverAddress; //server addr
 
-    vector<int> clients; //fds 
+    //vector<int> clients; //fds 
     //Get rid of the vector, store them just inside the map?
 
     map<int, Player*> player_map;
-
     map<int, Lobby*> lobby_map;
+
+    vector <Player*> disconnected_players;
 
 
 };

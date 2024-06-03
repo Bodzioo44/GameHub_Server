@@ -3,7 +3,7 @@
 
 Server::Server()
 {
-    clients = {};
+    //clients = {};
     running = true;
     lobby_id = 0;
 
@@ -26,7 +26,6 @@ void Server::HandleMessage(int clientSocket)
         {
             cout << "currently processing API: " << it.key() << endl;
             string current_api = it.key();
-
             if (current_api == API::ASSIGN_NAME)
             {
                 if (Check_Name_Availablity(it.value()))
@@ -214,8 +213,9 @@ void Server::Listening()
         {
             max_sock_value = STDIN_FILENO;
         }
-        for (int clientSocket : clients)
+        for (auto player_pair : player_map)
         {
+            int clientSocket = player_pair.first;
             FD_SET(clientSocket, &readfds);
             if (clientSocket > max_sock_value)
             {
@@ -243,8 +243,9 @@ void Server::Listening()
             }
             else
             {
-                for (int clientSocket : clients)
+                for (auto player_pair : player_map)
                 {
+                    int clientSocket = player_pair.first;
                     if (FD_ISSET(clientSocket, &readfds))
                     {    
                         HandleMessage(clientSocket);
@@ -273,14 +274,39 @@ void Server::AssignClient()
     // socklen_t clientSize = sizeof(clientAddress);
     int clientSocket = accept(serverSocket, nullptr, nullptr);
     cout << "New connection with fd: " << clientSocket << endl;
-    clients.push_back(clientSocket);
+    //clients.push_back(clientSocket);
+    player_map[clientSocket] = nullptr;
 }
 
 void Server::DisconnectClient(int clientSocket)
 {
     close(clientSocket);
     cout << "Client with fd: " << clientSocket << " disconnected" << endl;
-    clients.erase(std::remove(clients.begin(), clients.end(), clientSocket), clients.end());
+    //clients.erase(std::remove(clients.begin(), clients.end(), clientSocket), clients.end());
+
+    if (player_map[clientSocket] != nullptr) // 
+    {
+        Player* player = player_map[clientSocket];
+        Lobby* current_lobby = player->lobby_ptr;
+        if (player->lobby_ptr)
+        {
+            json response = current_lobby->Remove_Player(player);
+
+            if (response["Remove_Lobby"])
+            {
+                lobby_map.erase(current_lobby->Get_Lobby_ID());
+                //TODO: before deleting the lobby remove all disconnected players.
+                delete current_lobby;
+            }
+
+            for (json::iterator it = response.begin(); it != response.end(); ++it)
+            {
+                Send(stoi(it.key()), it.value());
+            }
+        }
+        //delete player_map[clientSocket];
+    }
+    player_map.erase(clientSocket);
 }
 
 
@@ -294,9 +320,9 @@ void Server::Send(int client, json message)
 
 bool Server::Check_Name_Availablity(string name)
 {
-    for (auto const& pair : player_map)
+    for (auto pair : player_map)
     {
-        if (pair.second->Get_name() == name)
+        if (pair.second != nullptr && pair.second->Get_name() == name)
         {
             return false;
         }

@@ -1,6 +1,5 @@
 -------------SERVER------------------
 
-
 Increase Buffer? Send packets in smaller portions?
 Find the best way to send enums over sockets, static_cast? DONE
 
@@ -9,7 +8,7 @@ Fix the whole disconnect/reconnect thingy (inside lobby too)
 map api calls to functions?
 
 
-
+Get rid of the file descriptor vector, store fds inside <int, Player*> map with a nullptr on connection.
 
 ----------------LOBBY---------------------
 
@@ -18,8 +17,6 @@ Add somekind of board state hash to confirm that boards are synchronized?
 Get rid of the GameType maps?
 
 Add list of disconnected players
-
-
 
 ------------PLAYER---------------------------
 
@@ -30,4 +27,8 @@ Get rid of the useless get/set from player class, make some variables public? DO
 
 -------------ENUMS-----------------------
 
-Get rid of the values from enums, and just static cast all enums.
+Get rid of the values from enums, and just static cast all enums. DONE
+
+
+--------------GENERAL---------------------
+const& while iterating? saves some memory for the duration of the loop xd
