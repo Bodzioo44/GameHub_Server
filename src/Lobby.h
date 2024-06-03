@@ -29,26 +29,30 @@ public:
     Lobby(int lobby_id, GameType type, Player* p);
     ~Lobby();
 
-    int Get_Lobby_ID() const;
-    
-    json Get_Lobby_Info() const;
+    json Player_Joined(Player* p);
+    json Player_Left(Player* p);
+    json Player_Disconnected(Player* p);
 
-    void print_Lobby_Info() const;
-
-    int Get_Player_Count() const;
-
-    json Add_Player(Player* p);
-    json Remove_Player(Player* p);
     json Start_Lobby(Player* p);
-    json Game_Update(Player* p, json data);
-    json Send_Lobby_Message(string message);
+    json Game_Update(Player* p, json data) const;
+    json Send_Lobby_Message(string message) const; //sends message to all players in lobby
+    json Get_Lobby_Info() const; //returns lobby info in json, used for sending lobby info to clients
+
+    int Get_Lobby_ID() const; //returns lobby id
+    int Get_Player_Count() const; //returns player count
+    void Print_Lobby_Info() const; //prints lobby info to console
+    bool Is_Empty() const; //returns true if lobby is empty
+    bool Is_Live() const; //returns true if lobby is live
 
 private:
+    void add_player(Player*);
+    void remove_player(Player*);
 
     vector<Player*> players;
-
+    vector<Player*> disconnected_players;
     Player* host;
     bool Live;
+    bool Lobby_Empty;
     GameType type;
     int unsigned player_count;
     int unsigned lobby_id;

@@ -44,21 +44,15 @@ private:
     //Move these somewhere else?
     //util header file?
     int Generate_Lobby_ID();
-    GameType Get_GameType(int type);
-
 
     int serverSocket; //server socket
     int lobby_id;
     bool running;
     sockaddr_in serverAddress; //server addr
 
-    //vector<int> clients; //fds 
-    //Get rid of the vector, store them just inside the map?
-
     map<int, Player*> player_map;
     map<int, Lobby*> lobby_map;
-
-    vector <Player*> disconnected_players;
+    map<string, Player*> disconnected_players;
 
 
 };

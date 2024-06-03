@@ -14,38 +14,22 @@ map<GameType, string> GameType_str =
     {GameType::CHESS_4, "Chess 4"}
 };
 
-
-
 Lobby::Lobby(int lobby_id, GameType type, Player* p): lobby_id(lobby_id), type(type)
 {
     max_player_count = GameType_vals[type];
     Live = false;
-    player_count = 1;
-    players.push_back(p);
+    Lobby_Empty = false;
+    player_count = 0;
     host = p;
-    p->lobby_ptr = this;
-    p->color = Assign_Color();
+    add_player(p);
 
     cout << "Creating lobby with id: " << lobby_id << endl;
 }
 
-//each lobby method should return Player name alongside with key/value pair (api_call, data).
-// {
-//     "PlayerName": 
-//     {
-//         "Message" : ["msg1", "msg2", "msg3"],
-//         "Game_Update": "data",
-//         ...
-//     }
-//     "Remove_Lobby" : true,
-//     "Disconnect_Player": true
 
-// }
-
-json Lobby::Add_Player(Player* p)
+json Lobby::Player_Joined(Player* p)
 {
     json Return_JSON;
-
     if (player_count < max_player_count && !Live)
     {   
         if (p->lobby_ptr)
@@ -58,11 +42,8 @@ json Lobby::Add_Player(Player* p)
             Return_JSON[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has joined the lobby.");
         }
 
-        player_count++;
-        players.push_back(p);
-        p->lobby_ptr = this;
-        p->color = Assign_Color();
-
+        add_player(p);
+        //FIXME: Sending the player same info with UPDATE_LOBBY and JOIN_LOBBY?
         for (Player* pp: players)
         {
             Return_JSON[to_string(pp->socket_fd)][API::UPDATE_LOBBY] = Get_Lobby_Info();
@@ -81,18 +62,12 @@ json Lobby::Add_Player(Player* p)
     return Return_JSON;
 }
 
-
-json Lobby::Remove_Player(Player* p)
+json Lobby::Player_Left(Player* p)
 {
     json response;
-    response["Remove_Lobby"] = false;
-
     if (!Live && player_count > 1)
     {
-        player_count--;
-        players.erase(std::remove(players.begin(), players.end(), p), players.end());
-        p->lobby_ptr = nullptr;
-
+        remove_player(p);
         if (p == host)
         {
             host = players[0];
@@ -110,16 +85,35 @@ json Lobby::Remove_Player(Player* p)
     {
         response[to_string(p->socket_fd)][API::MESSAGE].push_back("You have left the lobby.");
         response[to_string(p->socket_fd)][API::LEAVE_LOBBY] = "0";
-        player_count--;
-        players.erase(std::remove(players.begin(), players.end(), p), players.end());
-        p->lobby_ptr = nullptr;
-        response["Remove_Lobby"] = true;
+        remove_player(p);
+        Lobby_Empty = true;
     }
     else if (Live)
     {
         response[to_string(p->socket_fd)][API::MESSAGE].push_back("Cant leave live game.");
     }
     return response;
+}
+
+json Lobby::Player_Disconnected(Player* p)
+{
+    json response;
+    if (!Live && player_count > 1)
+    {
+        remove_player(p);
+        disconnected_players.push_back(p);
+        if (p == host)
+        {
+            host = players[0];
+        }
+        for (Player* pp: players)
+        {
+            response[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has disconnected.");
+            response[to_string(pp->socket_fd)][API::UPDATE_LOBBY] = Get_Lobby_Info();
+        }
+    }
+
+
 }
 
 json Lobby::Start_Lobby(Player* p)
@@ -146,7 +140,7 @@ json Lobby::Start_Lobby(Player* p)
 }
 
 
-json Lobby::Game_Update(Player* p, json data)
+json Lobby::Game_Update(Player* p, json data) const
 {
     json response;
     for (Player* pp: players)
@@ -159,7 +153,7 @@ json Lobby::Game_Update(Player* p, json data)
     return response;
 }
 
-json Lobby::Send_Lobby_Message(string message)
+json Lobby::Send_Lobby_Message(string message) const
 {
     json response;
     for (Player* p: players)
@@ -189,27 +183,33 @@ json Lobby::Get_Lobby_Info() const
     return response;
 }
 
-
-int Lobby::Get_Lobby_ID() const
+void Lobby::add_player(Player* p)
 {
-    return lobby_id;
+    player_count++;
+    players.push_back(p);
+    p->lobby_ptr = this;
+    p->color = Assign_Color();
 }
 
-
-
-int Lobby::Get_Player_Count() const
+void Lobby::remove_player(Player* p)
 {
-    return player_count;
+    player_count--;
+    players.erase(std::remove(players.begin(), players.end(), p), players.end());
+    p->lobby_ptr = nullptr;
 }
-
 
 Lobby::~Lobby()
 {
-    std::cout << "Obliterated lobby with id: " << lobby_id << endl;
+    std::cout << "Removed Lobby with id: " << lobby_id << endl;
+    // for (Player* p : disconnected_players)
+    // {
+    //     std::cout << "Removed disconnected player: "  << p->Get_name() << endl;
+    //     delete p;
+    // }
 }
 
 
-void Lobby::print_Lobby_Info() const
+void Lobby::Print_Lobby_Info() const
 {
     cout << "Lobby ID: " << lobby_id << endl;
     cout << "Game Type: " << GameType_str[type] << endl;
@@ -220,6 +220,27 @@ void Lobby::print_Lobby_Info() const
     {
         cout << p->Get_name() << endl;
     }
+}
+
+int Lobby::Get_Lobby_ID() const
+{
+    return lobby_id;
+}
+
+
+int Lobby::Get_Player_Count() const
+{
+    return player_count;
+}
+
+bool Lobby::Is_Empty() const
+{
+    return Lobby_Empty;
+}
+
+bool Lobby::Is_Live() const
+{
+    return Live;
 }
 
 //FIXME: Ugly, but will work for testing.

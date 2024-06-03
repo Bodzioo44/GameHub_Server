@@ -72,7 +72,7 @@ void Server::HandleMessage(int clientSocket)
                 int lobby_id = it.value();
                 if (lobby_map.find(lobby_id) != lobby_map.end()) //Check if lobby id is correct.
                 {
-                    json response = lobby_map[lobby_id]->Add_Player(player_map[clientSocket]);
+                    json response = lobby_map[lobby_id]->Player_Joined(player_map[clientSocket]);
                     for (json::iterator it = response.begin(); it != response.end(); ++it)
                     {
                         Send(stoi(it.key()), it.value());
@@ -91,15 +91,14 @@ void Server::HandleMessage(int clientSocket)
                 Lobby* current_lobby = current_player->lobby_ptr;
 
 
-                json response = current_lobby->Remove_Player(current_player);
+                json response = current_lobby->Player_Left(current_player);
 
-                if (response["Remove_Lobby"])
+                if (current_lobby->Is_Empty())
                 {
                     lobby_map.erase(current_lobby->Get_Lobby_ID());
-                    //TODO: before deleting the lobby remove all disconnected players.
+                    //TODO: before deleting the lobby remove all disconnected players (inside lobby destructor?)
                     delete current_lobby;
                 }
-                response.erase("Remove_Lobby");
                 
                 for (json::iterator it = response.begin(); it != response.end(); ++ it)
                 {
@@ -256,12 +255,12 @@ void Server::Listening()
 
         else if (activity < 0)
         {
-            cout << "Select error, something went wrong!" << endl;
+            cout << "Select error, something went really wrong!" << endl;
             perror("select");
         }
         else
         {
-            //cout << "Timeouaaa!" << endl;
+            //cout << "Timeoutaaa!" << endl;
         }
     }
     close(serverSocket); 
@@ -284,31 +283,64 @@ void Server::DisconnectClient(int clientSocket)
     cout << "Client with fd: " << clientSocket << " disconnected" << endl;
     //clients.erase(std::remove(clients.begin(), clients.end(), clientSocket), clients.end());
 
-    if (player_map[clientSocket] != nullptr) // 
+    if (player_map[clientSocket] != nullptr) //check if player was assigned to disonnected fd.
     {
-        Player* player = player_map[clientSocket];
-        Lobby* current_lobby = player->lobby_ptr;
-        if (player->lobby_ptr)
+        Player* current_player = player_map[clientSocket];
+        Lobby* current_lobby = current_player->lobby_ptr;
+        if (current_lobby) //if lobby exists.
         {
-            json response = current_lobby->Remove_Player(player);
-
-            if (response["Remove_Lobby"])
+            if (current_lobby->Is_Live())
             {
-                lobby_map.erase(current_lobby->Get_Lobby_ID());
-                //TODO: before deleting the lobby remove all disconnected players.
-                delete current_lobby;
+
             }
-
-            for (json::iterator it = response.begin(); it != response.end(); ++it)
+            else
             {
-                Send(stoi(it.key()), it.value());
+                json response = current_lobby->Player_Disconnected(current_player);
+                if (current_lobby->Is_Empty())
+                {
+                    lobby_map.erase(current_lobby->Get_Lobby_ID());
+                    delete current_lobby;
+                }
+                else
+                {
+                    for (json::iterator it = response.begin(); it != response.end(); ++it)
+                    {
+                        Send(stoi(it.key()), it.value());
+                    }
+                }
+            
             }
         }
-        //delete player_map[clientSocket];
+        else 
+        {
+            delete current_player;
+        }
     }
     player_map.erase(clientSocket);
 }
 
+
+        // if (current_lobby && current_lobby->Is_Live()) //check if player is in a lobby.
+        // {
+
+        //     json response = current_lobby->Player_Disconnected(player);
+        //     if (current_lobby->Is_Empty()) //check if lobby is empty after player disconnect.
+        //     {
+        //         lobby_map.erase(current_lobby->Get_Lobby_ID());
+        //         //TODO: before deleting the lobby remove all disconnected players.
+        //         //has to be outside of lobby destructor to also remove map entries?
+        //         delete current_lobby;
+        //     }
+        //     else //if there are still players in the lobby, send the update to them.
+        //     {
+        //         for (json::iterator it = response.begin(); it != response.end(); ++it)
+        //         {
+        //             Send(stoi(it.key()), it.value());
+        //         }
+        //     }
+        // }
+        // //delete player_map[clientSocket];
+    
 
 void Server::Send(int client, json message)
 {
