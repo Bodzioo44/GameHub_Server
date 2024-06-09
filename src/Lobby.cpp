@@ -160,9 +160,11 @@ json Lobby::Player_Reconnected(Player* p)
         response[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has reconnected.");
     }
     add_player(p);
+
     response[to_string(p->socket_fd)][API::MESSAGE].push_back("You have been reconnected to the server.");
-    response[to_string(p->socket_fd)][API::START_LOBBY] = p->color;
-    response[to_string(p->socket_fd)][API::GAME_HISTORY] = history;
+
+    response[to_string(p->socket_fd)][API::RECONNECT][API::START_LOBBY] = p->color;
+    response[to_string(p->socket_fd)][API::RECONNECT][API::GAME_HISTORY] = history;
 
     return response;
 }

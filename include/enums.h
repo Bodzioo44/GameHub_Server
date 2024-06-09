@@ -50,6 +50,7 @@ namespace API
     const string GLOBAL_MESSAGE = "Global_Message";
     const string LOBBY_MESSAGE = "Lobby_Message";
     const string GAME_HISTORY = "Game_History";
+    const string RECONNECT = "Reconnect";
 }
 
 

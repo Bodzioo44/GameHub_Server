@@ -24,8 +24,9 @@ Fix the ugliness of Player_Disconnected
 Get rid of Lobby_Empty, replaceit with json key
 
 
+FIXME: Sending message about player being disconnected to disconnected player?
 Add vector <Player*> other_players(Player*) method?
-Add list of disconnected players
+Add list of disconnected players DONE
 
 ------------PLAYER---------------------------
 

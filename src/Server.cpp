@@ -279,6 +279,7 @@ void Server::Listening()
                 }
                 else if (input == "info")
                 {
+                    cout << "All lobby info: " << endl;
                     for (auto pair : lobby_map)
                     {
                         pair.second->Print_Lobby_Info();
@@ -409,7 +410,7 @@ void Server::DisconnectClient(int clientSocket)
 void Server::Send(int client, json message)
 {
     string serialized_message = message.dump();
-    cout << "Sending serialized message: " << serialized_message << "With legth of: " << std::size(serialized_message) << endl;
+    cout << "Sending serialized message With legth of: " << std::size(serialized_message) << " to : " << client << " " << serialized_message << endl;
     send(client, serialized_message.c_str(), serialized_message.size(), 0);
 
 }
