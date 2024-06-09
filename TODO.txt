@@ -21,7 +21,7 @@ Add somekind of board state hash to confirm that boards are synchronized?
 Get rid of the GameType maps?
 
 Fix the ugliness of Player_Disconnected
-
+Get rid of Lobby_Empty, replaceit with json key
 
 
 Add vector <Player*> other_players(Player*) method?

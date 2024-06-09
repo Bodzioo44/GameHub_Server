@@ -28,21 +28,38 @@ void Server::HandleMessage(int clientSocket)
             string current_api = it.key();
             if (current_api == API::ASSIGN_NAME)
             {
-                if (Check_Name_Availablity(it.value()))
+                auto is_dc = disconnected_players.find(it.value());
+                if (is_dc != disconnected_players.end())
                 {
-                    Player* p = new Player(it.value(), clientSocket);
-                    player_map[clientSocket] = p;
+                    Player* dc_p = is_dc->second;
+                    dc_p->socket_fd = clientSocket;
+                    player_map[clientSocket] = dc_p;
+                    disconnected_players.erase(it.value());
                     json response;
-                    response[API::MESSAGE].push_back("You have joined the server as " + (std::string)it.value());
-                    Send(clientSocket, response);
-                    cout << "Player with name: " << p->Get_name() << " has joined the server with fd: " << clientSocket << endl;
+                    response = dc_p->lobby_ptr->Player_Reconnected(dc_p);
+                    for (json::iterator it = response.begin(); it != response.end(); ++it)
+                    {
+                        Send(stoi(it.key()), it.value());
+                    }
                 }
                 else
                 {
-                    json response;
-                    response[API::MESSAGE].push_back("Name already taken");
-                    Send(clientSocket, response);
-                    DisconnectClient(clientSocket);
+                    if (Check_Name_Availablity(it.value()))
+                    {
+                        Player* p = new Player(it.value(), clientSocket);
+                        player_map[clientSocket] = p;
+                        json response;
+                        response[API::MESSAGE].push_back("You have joined the server as " + (std::string)it.value());
+                        Send(clientSocket, response);
+                        cout << "Player with name: " << p->Get_name() << " has joined the server with fd: " << clientSocket << endl;
+                    }
+                    else
+                    {
+                        json response;
+                        response[API::MESSAGE].push_back("Name already taken");
+                        Send(clientSocket, response);
+                        DisconnectClient(clientSocket);
+                    }
                 }
 
             }
@@ -314,7 +331,7 @@ void Server::AssignClient()
 
 void Server::ReconnectClient(int clientSocket)
 {
-    
+
 }
 
 //Player* ptrs are stored inside player_map, and inside lobby.

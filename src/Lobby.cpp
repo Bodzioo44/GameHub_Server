@@ -132,6 +132,7 @@ json Lobby::Player_Disconnected(Player* p)
         disconnected_players.push_back(p);
         response["Disconnect_Player"] = p->socket_fd;
         remove_player(p);
+        p->lobby_ptr = this;
 
     }
     //Game is live and only one player left. move player to disconnected_players and let server know that lobby is empty.
@@ -160,6 +161,7 @@ json Lobby::Player_Reconnected(Player* p)
     }
     add_player(p);
     response[to_string(p->socket_fd)][API::MESSAGE].push_back("You have been reconnected to the server.");
+    response[to_string(p->socket_fd)][API::START_LOBBY] = p->color;
     response[to_string(p->socket_fd)][API::GAME_HISTORY] = history;
 
     return response;
