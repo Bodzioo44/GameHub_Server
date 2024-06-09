@@ -49,6 +49,7 @@ namespace API
     const string START_LOBBY = "Start_Lobby";
     const string GLOBAL_MESSAGE = "Global_Message";
     const string LOBBY_MESSAGE = "Lobby_Message";
+    const string GAME_HISTORY = "Game_History";
 }
 
 

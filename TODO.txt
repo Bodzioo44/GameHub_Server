@@ -5,11 +5,14 @@ Find the best way to send enums over sockets, static_cast? DONE
 Get rid of the file descriptor vector, store fds inside <int, Player*> map with a nullptr on connection. DONE
 
 Fix the whole disconnect/reconnect thingy (inside lobby too)
-map api calls to functions to replace Message_Handler()?
+map api calls to functions to replace Message_Handler()? NAH
 Reuse lobby ids
 
 Best way to store disconneted players?
+
 Best alternative for the maps?
+Move GameType to the client side? just request max_players and game name?
+YAP, get rid of the GameType mess, and just send over string/int.
 
 ----------------LOBBY---------------------
 
@@ -17,16 +20,16 @@ Add gamehistory array for reconnects.
 Add somekind of board state hash to confirm that boards are synchronized?
 Get rid of the GameType maps?
 
+Fix the ugliness of Player_Disconnected
 
-Add vector<Player*> other_players(Player*) method?
+
+
+Add vector <Player*> other_players(Player*) method?
 Add list of disconnected players
 
 ------------PLAYER---------------------------
 
 Get rid of the useless get/set from player class, make some variables public? DONE
-
-
-
 
 -------------ENUMS-----------------------
 
@@ -35,3 +38,4 @@ Get rid of the values from enums, and just static cast all enums. DONE
 
 --------------GENERAL---------------------
 const& while iterating? saves some memory for the duration of the loop xd
+pass player_map and disconnected_players through reference to some lobby methods?

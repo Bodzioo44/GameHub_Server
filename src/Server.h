@@ -39,6 +39,7 @@ private:
     void Send(int client, json message);
     void AssignClient();
     void DisconnectClient(int clientSocket);
+    void ReconnectClient(int clientSocket);
     bool Check_Name_Availablity(string name);
 
     //Move these somewhere else?
@@ -53,6 +54,7 @@ private:
     map<int, Player*> player_map;
     map<int, Lobby*> lobby_map;
     map<string, Player*> disconnected_players;
+    vector<int> Fds_to_remove;
 
 
 };

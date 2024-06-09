@@ -10,6 +10,9 @@ using std::string;
 using namespace Enums;
 using json = nlohmann::json;
 
+using namespace std;
+#include <iostream>
+
 class Lobby;
 
 

@@ -95,13 +95,15 @@ json Lobby::Player_Left(Player* p)
     return response;
 }
 
+//Ugly af
 json Lobby::Player_Disconnected(Player* p)
 {
     json response;
-    if (!Live && player_count > 1)
+    cout << "Player disconnected: " << p->Get_name();
+    if (!Live && player_count > 1) //Game isnt live yet, just delete the player and let others know that player has disconnected.
     {
+        cout << " But the game wasnt live!" << endl;
         remove_player(p);
-        disconnected_players.push_back(p);
         if (p == host)
         {
             host = players[0];
@@ -111,9 +113,56 @@ json Lobby::Player_Disconnected(Player* p)
             response[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has disconnected.");
             response[to_string(pp->socket_fd)][API::UPDATE_LOBBY] = Get_Lobby_Info();
         }
+        delete p;
     }
+    else if (!Live && player_count == 1) //Game isnt live yet and only one player left. delete the player and let server know that lobby is empty.
+    {
+        cout << " But the game wasnt live and only one player left!" << endl;
+        remove_player(p);
+        Lobby_Empty = true;
+        delete p;
+    }
+    else if (Live && player_count > 1) //Game is live. move player to disconnected_players and let others know that player has disconnected.
+    {
+        cout << " And the game was live!";
+        for (Player* pp: players)
+        {
+            response[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has disconnected.");
+        }
+        disconnected_players.push_back(p);
+        response["Disconnect_Player"] = p->socket_fd;
+        remove_player(p);
 
+    }
+    //Game is live and only one player left. move player to disconnected_players and let server know that lobby is empty.
+    //Server will delete the lobby, and through the destructor, also delete the disconnected players.
+    else if (Live && player_count == 1)
+    {
+        cout << " And the game was live and only one player left!";
+        disconnected_players.push_back(p);
+        remove_player(p);
+        Lobby_Empty = true;
+    }
+    for (Player* p : disconnected_players)
+    {
+        cout << "Disconnected players right before return: " << p->Get_name() << endl;
+    }
+    return response;
+}
 
+json Lobby::Player_Reconnected(Player* p)
+{
+    json response;
+    disconnected_players.erase(std::remove(disconnected_players.begin(), disconnected_players.end(), p), disconnected_players.end());
+    for (Player* pp: players)
+    {
+        response[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has reconnected.");
+    }
+    add_player(p);
+    response[to_string(p->socket_fd)][API::MESSAGE].push_back("You have been reconnected to the server.");
+    response[to_string(p->socket_fd)][API::GAME_HISTORY] = history;
+
+    return response;
 }
 
 json Lobby::Start_Lobby(Player* p)
@@ -140,9 +189,10 @@ json Lobby::Start_Lobby(Player* p)
 }
 
 
-json Lobby::Game_Update(Player* p, json data) const
+json Lobby::Game_Update(Player* p, json data)
 {
     json response;
+    history.push_back(data);
     for (Player* pp: players)
     {
         if (pp != p)
@@ -198,28 +248,48 @@ void Lobby::remove_player(Player* p)
     p->lobby_ptr = nullptr;
 }
 
+// Player* Lobby::disconnect_player(Player* p)
+// {
+
+// }
+
 Lobby::~Lobby()
 {
-    std::cout << "Removed Lobby with id: " << lobby_id << endl;
-    // for (Player* p : disconnected_players)
-    // {
-    //     std::cout << "Removed disconnected player: "  << p->Get_name() << endl;
-    //     delete p;
-    // }
+    std::cout << "Removed Lobby with id (inside deconstructor): " << lobby_id << endl;
+    for (Player* p : disconnected_players)
+    {
+        std::cout << "Removed disconnected player: "  << p->Get_name() << endl;
+        delete p;
+    }
 }
 
 
 void Lobby::Print_Lobby_Info() const
 {
+    cout << endl << endl;
     cout << "Lobby ID: " << lobby_id << endl;
     cout << "Game Type: " << GameType_str[type] << endl;
     cout << "Player Count: " << player_count << endl;
     cout << "Host: " << host->Get_name() << endl;
-    cout << "Players: " << endl;
+    cout << "Live: " << (Live ? "Yes" : "No") << endl;
+    cout << "Players: ";
     for (Player* p: players)
     {
-        cout << p->Get_name() << endl;
+        cout << p->Get_name() << ", ";
     }
+    cout << endl;
+    cout << "Disconnected Players: ";
+    for (Player* p: disconnected_players)
+    {
+        cout << p->Get_name() << ", ";
+    }
+    cout << endl;
+    cout << "History: ";
+    for (json j: history)
+    {
+        cout << j << ", ";
+    }
+    cout << endl << endl;
 }
 
 int Lobby::Get_Lobby_ID() const
@@ -231,6 +301,11 @@ int Lobby::Get_Lobby_ID() const
 int Lobby::Get_Player_Count() const
 {
     return player_count;
+}
+
+vector<Player*> Lobby::Get_DC_Players() const
+{
+    return disconnected_players;
 }
 
 bool Lobby::Is_Empty() const

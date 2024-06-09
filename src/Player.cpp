@@ -5,7 +5,9 @@ Player::Player(string name, int socket_fd): name(name), socket_fd(socket_fd)
     lobby_ptr = nullptr;
 }
 
-Player::~Player() {}
+Player::~Player() {
+    cout << "Player " << name << " deleted (inside Player destrucor)." << endl;
+}
 
 string Player::Get_name() const
 {

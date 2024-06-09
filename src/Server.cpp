@@ -97,6 +97,8 @@ void Server::HandleMessage(int clientSocket)
                 {
                     lobby_map.erase(current_lobby->Get_Lobby_ID());
                     //TODO: before deleting the lobby remove all disconnected players (inside lobby destructor?)
+                    //there will be no disconnected players inside non live lobby??
+                    //separate api for whenever player leaves live lobby? (outside of disconnects)
                     delete current_lobby;
                 }
                 
@@ -182,6 +184,7 @@ void Server::HandleMessage(int clientSocket)
             {
                 cout << "Unknown API" << endl;
             }
+            cout << "AND we done" << endl;
             
         }
     }
@@ -194,7 +197,8 @@ void Server::CreateSocket()
     serverAddress.sin_family = AF_INET; 
     serverAddress.sin_port = htons(PORT); 
     serverAddress.sin_addr.s_addr = INADDR_ANY; 
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, nullptr, 0);
+    int yes = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
     bind(serverSocket, (struct sockaddr*) &serverAddress, sizeof(serverAddress)); 
 }
 
@@ -238,6 +242,32 @@ void Server::Listening()
                 {
                     running = false;
                 }
+                else if (input == "dc")
+                {
+                    cout << "Disconnected Players: ";
+                    for (auto pair : disconnected_players)  {cout << pair.first << ", ";}
+                    cout << endl;
+                }
+                else if (input == "p")
+                {
+                    cout << "Players: ";
+                    for (auto pair : player_map)  {cout << pair.second->Get_name() << ", ";}
+                    cout << endl;
+                }
+                else if (input == "l")
+                {
+                    cout << "Lobby ID's: ";
+                    for (auto pair : lobby_map)  {cout << pair.first << ", ";}
+                    cout << endl;
+                }
+                else if (input == "info")
+                {
+                    for (auto pair : lobby_map)
+                    {
+                        pair.second->Print_Lobby_Info();
+                    }
+                }
+
                 //cout << input << endl;
             }
             else
@@ -250,6 +280,11 @@ void Server::Listening()
                         HandleMessage(clientSocket);
                     }
                 }
+                for (int fd : Fds_to_remove)
+                {
+                    player_map.erase(fd);
+                }
+                Fds_to_remove.clear();
             }
         }
 
@@ -277,48 +312,60 @@ void Server::AssignClient()
     player_map[clientSocket] = nullptr;
 }
 
+void Server::ReconnectClient(int clientSocket)
+{
+    
+}
+
+//Player* ptrs are stored inside player_map, and inside lobby.
+//Whenever player disconnects, player is always removed from player_map.
+//Lobby class can decide whether to keep (for future reconnects) or delete the player object through pointer.
+
 void Server::DisconnectClient(int clientSocket)
 {
     close(clientSocket);
-    cout << "Client with fd: " << clientSocket << " disconnected" << endl;
+    cout << "Client with fd: " << clientSocket << " has been disconnected" << endl;
     //clients.erase(std::remove(clients.begin(), clients.end(), clientSocket), clients.end());
 
-    if (player_map[clientSocket] != nullptr) //check if player was assigned to disonnected fd.
+    if (player_map[clientSocket] != nullptr) //check if fd had assigned player.
     {
         Player* current_player = player_map[clientSocket];
         Lobby* current_lobby = current_player->lobby_ptr;
-        if (current_lobby) //if lobby exists.
+        if (current_lobby)
         {
-            if (current_lobby->Is_Live())
+            json response = current_lobby->Player_Disconnected(current_player);
+            if (current_lobby->Is_Empty())
             {
-
+                lobby_map.erase(current_lobby->Get_Lobby_ID());
+                for (Player* p : current_lobby->Get_DC_Players())
+                {
+                    disconnected_players.erase(p->Get_name());
+                }
+                delete current_lobby;
             }
             else
             {
-                json response = current_lobby->Player_Disconnected(current_player);
-                if (current_lobby->Is_Empty())
+                if (response.find("Disconnect_Player") != response.end())
                 {
-                    lobby_map.erase(current_lobby->Get_Lobby_ID());
-                    delete current_lobby;
+                    Player* player_to_dc = player_map[(response["Disconnect_Player"])];
+                    cout << "Player to disconnect (moved inside dc_player vector): " << player_to_dc->Get_name() << endl;
+                    disconnected_players[player_to_dc->Get_name()] = player_to_dc;
+                    response.erase("Disconnect_Player");
                 }
-                else
+                
+
+                for (json::iterator it = response.begin(); it != response.end(); ++it)
                 {
-                    for (json::iterator it = response.begin(); it != response.end(); ++it)
-                    {
-                        Send(stoi(it.key()), it.value());
-                    }
+                    Send(stoi(it.key()), it.value());
                 }
-            
             }
         }
-        else 
-        {
-            delete current_player;
-        }
+        else {delete current_player;}
     }
-    player_map.erase(clientSocket);
-}
+    //player_map.erase(clientSocket); //erasing stuff from map while iterating over it is VERY BAD.
+    Fds_to_remove.push_back(clientSocket);
 
+}
 
         // if (current_lobby && current_lobby->Is_Live()) //check if player is in a lobby.
         // {
