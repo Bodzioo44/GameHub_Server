@@ -200,9 +200,7 @@ void Server::HandleMessage(int clientSocket)
             else
             {
                 cout << "Unknown API" << endl;
-            }
-            cout << "AND we done" << endl;
-            
+            }            
         }
     }
 }
@@ -410,7 +408,7 @@ void Server::DisconnectClient(int clientSocket)
 void Server::Send(int client, json message)
 {
     string serialized_message = message.dump();
-    cout << "Sending serialized message With legth of: " << std::size(serialized_message) << " to : " << client << " " << serialized_message << endl;
+    cout << "Sending serialized message With legth of " << std::size(serialized_message) << " to FD " << client << ": " << serialized_message << endl;
     send(client, serialized_message.c_str(), serialized_message.size(), 0);
 
 }

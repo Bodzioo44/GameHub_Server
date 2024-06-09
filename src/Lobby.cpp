@@ -99,10 +99,10 @@ json Lobby::Player_Left(Player* p)
 json Lobby::Player_Disconnected(Player* p)
 {
     json response;
-    cout << "Player disconnected: " << p->Get_name();
+    //cout << "Player disconnected: " << p->Get_name();
     if (!Live && player_count > 1) //Game isnt live yet, just delete the player and let others know that player has disconnected.
     {
-        cout << " But the game wasnt live!" << endl;
+        //cout << " But the game wasnt live!" << endl;
         remove_player(p);
         if (p == host)
         {
@@ -117,14 +117,14 @@ json Lobby::Player_Disconnected(Player* p)
     }
     else if (!Live && player_count == 1) //Game isnt live yet and only one player left. delete the player and let server know that lobby is empty.
     {
-        cout << " But the game wasnt live and only one player left!" << endl;
+        //cout << " But the game wasnt live and only one player left!" << endl;
         remove_player(p);
         Lobby_Empty = true;
         delete p;
     }
     else if (Live && player_count > 1) //Game is live. move player to disconnected_players and let others know that player has disconnected.
     {
-        cout << " And the game was live!";
+        //cout << " And the game was live!";
         for (Player* pp: players)
         {
             response[to_string(pp->socket_fd)][API::MESSAGE].push_back(p->Get_name() + " has disconnected.");
@@ -139,15 +139,15 @@ json Lobby::Player_Disconnected(Player* p)
     //Server will delete the lobby, and through the destructor, also delete the disconnected players.
     else if (Live && player_count == 1)
     {
-        cout << " And the game was live and only one player left!";
+        //cout << " And the game was live and only one player left!";
         disconnected_players.push_back(p);
         remove_player(p);
         Lobby_Empty = true;
     }
-    for (Player* p : disconnected_players)
-    {
-        cout << "Disconnected players right before return: " << p->Get_name() << endl;
-    }
+    // for (Player* p : disconnected_players)
+    // {
+    //     cout << "Disconnected players right before return: " << p->Get_name() << endl;
+    // }
     return response;
 }
 
