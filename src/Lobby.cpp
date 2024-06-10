@@ -212,7 +212,7 @@ json Lobby::Send_Lobby_Message(string message) const
     json response;
     for (Player* p: players)
     {
-        response[to_string(p->socket_fd)][API::LOBBY_MESSAGE] = message;
+        response[to_string(p->socket_fd)][API::LOBBY_MESSAGE] = p->Get_name() + ": " + message;
     }
     return response;
 }

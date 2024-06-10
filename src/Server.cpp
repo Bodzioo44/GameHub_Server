@@ -167,8 +167,11 @@ void Server::HandleMessage(int clientSocket)
             }
             else if (current_api == API::GLOBAL_MESSAGE)
             {
+                
                 json response;
-                response[API::GLOBAL_MESSAGE] = it.value();
+                Player* p = player_map[clientSocket];
+                string message = it.value();
+                response[API::GLOBAL_MESSAGE] = p->Get_name() + ": " + message;
                 for (auto const& pair : player_map)
                 {
                     Send(pair.first, response);

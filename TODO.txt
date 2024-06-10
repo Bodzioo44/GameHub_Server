@@ -1,6 +1,6 @@
 -------------SERVER------------------
 
-Increase Buffer? Send packets in smaller portions?
+Increase Buffer? Send packets in smaller portions? Or it doesnt matter while reeiving on server side?
 Find the best way to send enums over sockets, static_cast? DONE
 Get rid of the file descriptor vector, store fds inside <int, Player*> map with a nullptr on connection. DONE
 
@@ -22,6 +22,7 @@ Get rid of the GameType maps?
 
 Fix the ugliness of Player_Disconnected
 Get rid of Lobby_Empty, replace it with json key
+Reconnect Method needs fixing? sometimes turn arent synchronized afte reconnect?
 
 
 FIXME: Sending message about player being disconnected to disconnected player?
