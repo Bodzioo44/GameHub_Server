@@ -1,5 +1,5 @@
-#ifndef ENUMS_H
-#define ENUMS_H
+#ifndef NAMESPACE_H
+#define NAMESPACE_H
 
 #include <map>
 #include <string>

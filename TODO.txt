@@ -16,12 +16,12 @@ YAP, get rid of the GameType mess, and just send over string/int.
 
 ----------------LOBBY---------------------
 
-Add gamehistory array for reconnects.
+Add gamehistory array for reconnects. DONE
 Add somekind of board state hash to confirm that boards are synchronized?
 Get rid of the GameType maps?
 
 Fix the ugliness of Player_Disconnected
-Get rid of Lobby_Empty, replaceit with json key
+Get rid of Lobby_Empty, replace it with json key
 
 
 FIXME: Sending message about player being disconnected to disconnected player?

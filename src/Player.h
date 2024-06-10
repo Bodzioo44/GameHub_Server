@@ -3,8 +3,7 @@
 
 #include <string>
 using std::string;
-
-#include "enums.h"
+#include "namespace.h"
 #include "json.hpp"
 
 using namespace Enums;

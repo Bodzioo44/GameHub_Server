@@ -3,7 +3,7 @@
 
 #include "Player.h"
 #include "json.hpp"
-#include "enums.h"
+#include "namespace.h"
 
 
 #include <vector>

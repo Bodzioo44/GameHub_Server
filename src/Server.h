@@ -15,7 +15,7 @@
 #include "Player.h"
 
 #include "json.hpp"
-#include "enums.h"
+#include "namespace.h"
 
 using json = nlohmann::json;
 using GameType = Enums::GameType;
